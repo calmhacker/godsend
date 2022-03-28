@@ -12,8 +12,6 @@ import (
 type search struct {
 	scanner crawler.Interface
 	sites   []string
-	depth   int
-	workers int
 }
 
 func main() {
@@ -26,8 +24,6 @@ func new() *search {
 	s := search{}
 	s.scanner = spider.New()
 	s.sites = []string{"https://go.dev", "https://golang.org/"}
-	s.depth = 2
-	s.workers = 10
 	return &s
 }
 
@@ -40,7 +36,7 @@ func (s *search) scan() []crawler.Document {
 
 		if err != nil {
 			log.Println("Scan error", err)
-			break
+			continue
 		}
 
 		for _, i := range d {
