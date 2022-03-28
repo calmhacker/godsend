@@ -1,63 +1,20 @@
 package spider
 
 import (
-	"log"
+	"godsend/pkg/crawler"
 	"net/http"
 	"strings"
-	"sync"
 
 	"golang.org/x/net/html"
-
-	"godsend/pkg/crawler"
 )
 
-type Service struct{}
-
-func New() *Service {
-	s := Service{}
-	return &s
+type Service struct {
+	id int
 }
 
-func (s *Service) BatchScan(urls []string, depth int, workers int) (<-chan crawler.Document, <-chan error) {
-	chURLs := make(chan string)
-	chOut := make(chan crawler.Document)
-	chErr := make(chan error)
-	var wg sync.WaitGroup
-	wg.Add(workers)
-
-	for i := 0; i < workers; i++ {
-		go func() {
-			defer wg.Done()
-			for url := range chURLs {
-				data, err := s.Scan(url, depth)
-				if err != nil {
-					log.Println("error:", err)
-					chErr <- err
-					return
-				}
-				for _, doc := range data {
-					log.Println("scanned doc:", doc)
-					chOut <- doc
-				}
-			}
-		}()
-	}
-	go func() {
-		wg.Wait()
-		log.Println("closing err and output channels")
-		close(chErr)
-		close(chOut)
-	}()
-
-	go func() {
-		for _, url := range urls {
-			chURLs <- url
-		}
-		log.Println("closing link channels")
-		close(chURLs)
-	}()
-
-	return chOut, chErr
+func New() *Service {
+	s := Service{id: 0}
+	return &s
 }
 
 func (s *Service) Scan(url string, depth int) (data []crawler.Document, err error) {
@@ -69,8 +26,10 @@ func (s *Service) Scan(url string, depth int) (data []crawler.Document, err erro
 		item := crawler.Document{
 			URL:   url,
 			Title: title,
+			ID:    s.id,
 		}
 		data = append(data, item)
+		s.id++
 	}
 
 	return data, nil

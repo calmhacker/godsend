@@ -5,26 +5,34 @@ import (
 	"fmt"
 	"godsend/pkg/crawler"
 	"godsend/pkg/crawler/spider"
+	"godsend/pkg/index"
+	"godsend/pkg/index/hash"
 	"log"
-	"strings"
 )
 
 type search struct {
 	scanner crawler.Interface
 	sites   []string
+	index   index.Interface
 }
 
 func main() {
 	search := new()
-	docs := search.scan()
-	result(docs)
+	search.run()
 }
 
 func new() *search {
 	s := search{}
 	s.scanner = spider.New()
 	s.sites = []string{"https://go.dev", "https://golang.org/"}
+	s.index = hash.New()
 	return &s
+}
+
+func (s *search) run() {
+	docs := s.scan()
+	s.index.Add(docs)
+	s.find()
 }
 
 func (s *search) scan() []crawler.Document {
@@ -40,44 +48,20 @@ func (s *search) scan() []crawler.Document {
 		}
 
 		for _, i := range d {
+			log.Println(i)
 			docs = append(docs, i)
 		}
 	}
-
-	log.Println("Scan has been completed ✅")
 	return docs
 }
 
-func result(docs []crawler.Document) {
+func (s *search) find() {
 	sFlag := flag.String("s", "", "search by word")
 	flag.Parse()
 
 	if *sFlag != "" {
-		byWord(sFlag, docs)
+		ids := s.index.Search(*sFlag)
+		fmt.Printf("\n'%s' was found in:\n%v", *sFlag, ids)
 		return
-	}
-
-	for i, item := range docs {
-		fmt.Printf("Page %d. %s\nURL: %s\n\n", i+1, item.Title, item.URL)
-	}
-}
-
-func byWord(w *string, docs []crawler.Document) {
-	any := false
-	n := 0
-
-	for _, d := range docs {
-		if strings.Contains(d.Title, *w) {
-			if !any {
-				any = true
-				fmt.Printf("%s was found at:\n\n", *w)
-			}
-			n++
-			fmt.Printf("%d. %s\n%s\n\n", n, d.Title, d.URL)
-		}
-	}
-
-	if !any {
-		fmt.Printf("There were no page containing '%s' found", *w)
 	}
 }
