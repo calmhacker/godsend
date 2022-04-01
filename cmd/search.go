@@ -5,26 +5,39 @@ import (
 	"fmt"
 	"godsend/pkg/crawler"
 	"godsend/pkg/crawler/spider"
+	"godsend/pkg/index"
+	"godsend/pkg/index/hash"
 	"log"
-	"strings"
 )
 
 type search struct {
 	scanner crawler.Interface
 	sites   []string
+	index   index.Interface
 }
 
 func main() {
 	search := new()
-	docs := search.scan()
-	result(docs)
+	search.run()
 }
 
 func new() *search {
 	s := search{}
 	s.scanner = spider.New()
 	s.sites = []string{"https://go.dev", "https://golang.org/"}
+	s.index = hash.New()
 	return &s
+}
+
+func (s *search) run() {
+	docs := s.scan()
+	s.index.Add(docs)
+
+	sFlag := flag.String("s", "", "search by word")
+	flag.Parse()
+
+	// s.find(*sFlag)
+	s.bsearchFind(*sFlag)
 }
 
 func (s *search) scan() []crawler.Document {
@@ -43,41 +56,55 @@ func (s *search) scan() []crawler.Document {
 			docs = append(docs, i)
 		}
 	}
-
-	log.Println("Scan has been completed ✅")
 	return docs
 }
 
-func result(docs []crawler.Document) {
-	sFlag := flag.String("s", "", "search by word")
-	flag.Parse()
+func (s *search) find(str string) {
+	if str != "" {
+		ids := s.index.Search(str)
+		docs := s.index.Docs()
 
-	if *sFlag != "" {
-		byWord(sFlag, docs)
-		return
-	}
+		fmt.Printf("\n'%s' was found in:\n\n", str)
 
-	for i, item := range docs {
-		fmt.Printf("Page %d. %s\nURL: %s\n\n", i+1, item.Title, item.URL)
+		for _, id := range ids {
+			fmt.Printf("%v\n", docs[id])
+		}
 	}
 }
 
-func byWord(w *string, docs []crawler.Document) {
-	any := false
-	n := 0
+func (s *search) bsearchFind(str string) {
+	if str != "" {
+		ids := s.index.Search(str)
+		docs := s.index.Docs()
 
-	for _, d := range docs {
-		if strings.Contains(d.Title, *w) {
-			if !any {
-				any = true
-				fmt.Printf("%s was found at:\n\n", *w)
+		fmt.Printf("\n'%s' was found in:\n\n", str)
+
+		for _, id := range ids {
+			if bsearch(id, docs) {
+				fmt.Printf("%v\n", docs[id])
 			}
-			n++
-			fmt.Printf("%d. %s\n%s\n\n", n, d.Title, d.URL)
 		}
 	}
+}
 
-	if !any {
-		fmt.Printf("There were no page containing '%s' found", *w)
+func bsearch(s int, arr []crawler.Document) bool {
+	low := 0
+	high := len(arr) - 1
+
+	for low <= high {
+		median := (low + high) / 2
+
+		if arr[median].ID < s {
+			low = median + 1
+			continue
+		}
+
+		high = median - 1
 	}
+
+	if low == len(arr) || arr[low].ID != s {
+		return false
+	}
+
+	return true
 }
