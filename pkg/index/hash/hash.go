@@ -26,7 +26,6 @@ func (i *Index) Add(docs []crawler.Document) {
 	})
 
 	for _, doc := range docs {
-
 		// add docs to index
 		i.docs = append(i.docs, doc)
 
@@ -43,6 +42,10 @@ func (i *Index) Add(docs []crawler.Document) {
 
 func (i *Index) Search(word string) []int {
 	return i.lexems[strings.ToLower(word)]
+}
+
+func (i *Index) Docs() []crawler.Document {
+	return i.docs
 }
 
 func present(ids []int, itemId int) bool {

@@ -61,7 +61,12 @@ func (s *search) find() {
 
 	if *sFlag != "" {
 		ids := s.index.Search(*sFlag)
-		fmt.Printf("\n'%s' was found in:\n%v", *sFlag, ids)
-		return
+		docs := s.index.Docs()
+
+		fmt.Printf("\n'%s' was found in:\n\n", *sFlag)
+
+		for _, id := range ids {
+			fmt.Printf("%v\n", docs[id])
+		}
 	}
 }
